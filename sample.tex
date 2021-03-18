@@ -1,0 +1,256 @@
+\documentclass[twoside,11pt]{article}
+
+% Any additional packages needed should be included after jmlr2e.
+% Note that jmlr2e.sty includes epsfig, amssymb, natbib and graphicx,
+% and defines many common macros, such as 'proof' and 'example'.
+%
+% It also sets the bibliographystyle to plainnat; for more information on
+% natbib citation styles, see the natbib documentation, a copy of which
+% is archived at http://www.jmlr.org/format/natbib.pdf
+
+\usepackage{jmlr2e}
+\usepackage{multirow}
+
+% Definitions of handy macros can go here
+
+\newcommand{\dataset}{{\cal D}}
+\newcommand{\fracpartial}[2]{\frac{\partial #1}{\partial  #2}}
+
+% Short headings should be running head and authors last names
+
+\ShortHeadings{COGS 118A FINAL PROJECT}
+\firstpageno
+
+\begin{document}
+
+\title{An Empirical Comparison of Supervised Learning Algorithms}
+
+\author{\name Darren Yau \email dayau@ucsd.edu\\
+       \addr University of California, San Diego\\
+       La Jolla, CA 92093, USA}
+      
+\editor{Me}
+
+\maketitle
+
+\begin{abstract}%   <- trailing '%' for backward compatibility of .sty file
+This paper attempts to replicate Caruana and Niculescu-Mizil’s 2006 paper by comparing the performances of 3 supervised machine learning algorithms across 4 binary classification datasets. The algorithms include logistic regression, k-nearest neighbors, and random forests. The optimal model for each algorithm is selected by conducting grid searches through sets of possible hyperparameters. The optimal models are then assessed based on their Accuracy, F1-Score, and Area Under ROC Curve, averaged across 5 trials per algorithm, per dataset. The results of our experiment confirm the findings of Caruana and Niculescu-Mizil: logistic regression is among the poorest performing models, k-nearest neighbors is slightly better but still mediocre, and random forests perform consistently well across all performance metrics and datasets of various balances.
+
+\end{abstract}
+
+
+
+\section{Introduction}
+Caruana and Niculescu-Mizil’s 2006 paper (CNM06) brings outdated studies comparing learning algorithms into the modern era. The most well-known of these studies, STATLOG (King et al., 1995), was comprehensive when it was performed, but since then new algorithms with excellent performance have emerged. Modern learning methods such as bagging, boosting, SVMs, and random forests had not yet been extensively and empirically evaluated. CNM06 remedies this problem by evaluating more recent algorithms.
+
+CNM06 also provides a more detailed evaluation of algorithms through domain-specific performance metrics. For example Precision/Recall measures are used in information retrieval; medicine prefers ROC area, etc. Different performance metrics measure different tradeoffs in the predictions made by a classifier, and it is possible for learning methods to perform well on one metric, but be suboptimal on other metrics. For this reason, CNM06 evaluates algorithms on a broad set of performance metrics.
+
+CNM06 finds that random forests, bagged trees, and neural nets generally perform the best, averaged across eight performance metrics and eleven datasets. Similarly, the poorest performing models are naive bayes, logistic regression, and decision trees. Regardless, Caruana and Niculescu-Mizil remind us that there is no Free Lunch and even the best models perform poorly on some problems, and vice versa.
+
+This paper attempts to replicate the findings of CNM06 on a smaller subset of algorithms (logistic regression, k-nearest neighbors, random forests), datasets (ADULT, COVTYPE, LETTER, DOTA), and performance metrics (ACC, FSC, AUROC). A smaller-scale replication of CNM06 would test the robustness of its original findings, as well as uncover any potential consequences associated with the specialization of any single result.
+
+\section{Methodology}
+\subsection{Learning Algorithms}
+We utilize 3 different learning algorithms for this study. This section summarizes the set of possible parameters tested on each algorithm. The optimal parameters are then selected after a 5-fold cross validation grid search.
+
+{\bf Logistic Regression (LOGREG):} we train both unregularized and regularized models, varying the ridge (regularization) parameter by factors of 10 from $10^{-8}$ to $10^4$. We use both l1 and l2 penalties on regularized models. We use newton-cg, lbfgs, liblinear, sag, and saga for the solvers, where appropriate.
+
+{\bf KNN:} we use 26 evenly-spaced values of $K$ ranging from $K = 1$ to $K = 101$. In our opinion, it is ridiculous to investigate up to $K = |trainset|$ as in CNM06. A $K$ that large just votes for the class with the most examples every time. We use KNN with Euclidean distance. We also use uniform and distance weighted KNN.
+
+{\bf Random Forests (RF):} every forest has 1024 trees. The size of the feature set considered at each split is 1,2,4,6,8,12,16 or 20.\\
+\\
+We scale numerical attributes to 0 mean 1 std for all algorithms. In total, we train about 700 different models in each trial on each problem. We train about 14,000 unique models throughout this paper.
+
+\subsection{Performance Metrics}
+Algorithmic performance is measured across 3 metrics: Accuracy (ACC), F1-Score (FSC), and Area Under ROC Curve (AUROC). ACC is a threshold metric ranging from $[0, 1]$ and can be measured as follows:
+
+\begin{equation}
+    ACC = \frac{TP + TN}{P + N}
+\end{equation}
+
+FSC is a threshold metric ranging from $[0, 1]$ and is defined as follows:
+
+\begin{equation}
+    FSC = \frac{2TP}{2TP + FP + FN}
+\end{equation}
+
+AUROC is a rank metric and is calculated by finding the area under the precision-recall curve generated with varying thresholds.
+
+\subsection{Data Sets}
+We compare the algorithms on 4 binary classification problems. ADULT, COVTYPE, LETTER, and DOTA are all available online from the UCI Repository. 
+
+ADULT was readily available as a binary classification problem. Samples with $>50k$ income are treated as positives, and those with $\leq50k$ income as negatives. This yields a relatively imbalanced dataset, with $24.1\%$ positive labels and $75.9\%$ negative labels. Nominal attributes are present, so one-hot encoding was employed.
+
+COVTYPE has been converted to a binary problem by treating the largest class as the positive and the rest as negative. This yields a balanced dataset, with $48.8\%$ of the samples being positive and $51.2\%$ being negative. Nominal attributes are present, so one-hot encoding was employed.
+
+LETTER was booleanized by treating letters A-M as positives and the rest as negatives, yielding a well-balanced problem. $49.7\%$ of the samples are positive and $50.3\%$ are negative.
+
+DOTA was readily available as a binary classification problem. Samples who won were treated as positives, and those who lost as negatives. By this definition, the dataset is $52.7\%$ positive and $47.3\%$ negative. Nominal attributes, surprisingly in the form of integers, are present, so one-hot encoding was employed.\\
+\\
+See Table 1 for more detailed characteristics of these problems.
+
+\begin{table}[htb]
+\centering
+\begin{tabular}{lcccr}
+\multicolumn{5}{c}{Table 1. Description of problems}                                        \\ \hline
+\multicolumn{1}{|l}{PROBLEM} & \#ATTR & TRAIN SIZE & TEST SIZE & \multicolumn{1}{r|}{\%POZ}  \\ \hline
+\multicolumn{1}{|l}{ADULT}   & 14     & 5000       & 25162     & \multicolumn{1}{r|}{24.1\%} \\
+\multicolumn{1}{|l}{COVTYPE} & 13     & 5000       & 576012    & \multicolumn{1}{r|}{48.8\%} \\
+\multicolumn{1}{|l}{LETTER}  & 16     & 5000       & 15000     & \multicolumn{1}{r|}{49.7\%} \\
+\multicolumn{1}{|l}{DOTA}    & 13     & 5000       & 87650     & \multicolumn{1}{r|}{52.7\%} \\ \hline
+\end{tabular}
+\end{table}
+
+\section{Performances by Metric}
+Each algorithm and problem combination is subject to a 5-fold cross validation grid search to find the optimal hyperparameters. 5000 random samples are initially chosen as training data for this grid search, while the rest of the data compose the test set. Once the optimal hyperparameters are found from the training set, we train the algorithm once more on the test set, and measure its performance on a variety of metrics. This entire process constitutes 1 trial, and a total of 5 trials are conducted for each algorithm and problem combination. We use the averages of the metrics over all trials to determine the overall scores.
+
+Table 2 shows the normalized score for each algorithm on each of the 3 metrics. Each entry is an average over the 4 problems. The last column, MEAN, is the mean normalized score over the 3 metrics, 4 problems, and 5 trials. In the table, the algorithm with the best performance on each metric is {\bf boldfaced}. Other algorithms whose performance is not statistically distinguishable from the best algorithm at $p = 0.05$ using paired t-tests on the 5 trials are labeled with a {\bf *}. Entries in the table that are neither bold nor starred indicate performance that is significantly lower than the best models at $p = 0.05$.
+
+
+\begin{table}[htb]
+\centering
+\begin{tabular}{lcccc}
+\multicolumn{5}{c}{Table 2. Normalized testing scores for each learning algorithm by metric}                                                      \\ \hline
+\multicolumn{1}{|l|}{MODEL}  & ACC            & FSC            & \multicolumn{1}{c|}{AUROC}          & \multicolumn{1}{c|}{MEAN}           \\ \hline
+\multicolumn{1}{|l|}{LOGREG} & 0.727          & 0.692          & \multicolumn{1}{c|}{0.706}          & \multicolumn{1}{c|}{0.708}          \\
+\multicolumn{1}{|l|}{KNN}    & 0.779          & 0.746          & \multicolumn{1}{c|}{0.754}          & \multicolumn{1}{c|}{0.760}          \\
+\multicolumn{1}{|l|}{RF}     & \textbf{0.796} & \textbf{0.767} & \multicolumn{1}{c|}{\textbf{0.777}} & \multicolumn{1}{c|}{\textbf{0.780}} \\ \hline
+\end{tabular}
+\end{table}
+
+ For all 3 performance metrics, RF appears as the clear winner among the 3 algorithms (Table 2). Its mean ACC is significantly higher than those of LOGREG and KNN across all 5 trials ($p = 0.0049, 0.0004$) (Table 2 Supplemental in Appendix). The same can be said for FSC ($p = 0.0015, 0.0010$) and AUROC ($p = 0.0032, 0.0001$). LOGREG appears to perform the worst across the board, while KNN's performance consistently falls between RF and LOGREG.
+
+\section{Performances by Problem}
+
+\begin{table}[htb]
+\centering
+\begin{tabular}{lccccc}
+\multicolumn{6}{c}{Table 3. Normalized testing scores for each learning algorithm by problem}                                             \\ \hline
+\multicolumn{1}{|l|}{MODEL}  & ADULT          & COVTYPE        & LETTER         & \multicolumn{1}{c|}{DOTA}           & \multicolumn{1}{c|}{MEAN}           \\ \hline
+\multicolumn{1}{|l|}{LOGREG} & 0.757          & 0.751          & 0.726          & \multicolumn{1}{c|}{\textbf{0.599}} & \multicolumn{1}{c|}{0.708}          \\
+\multicolumn{1}{|l|}{KNN}    & 0.737          & 0.783          & \textbf{0.951} & \multicolumn{1}{c|}{0.569}          & \multicolumn{1}{c|}{0.760}          \\
+\multicolumn{1}{|l|}{RF}     & \textbf{0.768} & \textbf{0.824} & 0.946          & \multicolumn{1}{c|}{0.582}          & \multicolumn{1}{c|}{\textbf{0.780}} \\ \hline
+\end{tabular}
+\end{table}
+
+Table 3 shows the normalized score for each algorithm on each of the 4 problems. Each entry is an average over the 3 performance metrics. RF continues to dominate LOGREG and KNN on the ADULT ($p = 0.0001, 0.0001$) and COVTYPE ($p = 0.0001, 0.0001$) datasets (Table 3 Supplemental in Appendix). However, KNN actually outperforms RF on the LETTER dataset by a significant margin ($p = 0.004$). Surprisingly, even LOGREG takes home a win as it outperforms RF on the DOTA dataset by a significant margin ($p = 0.0001$). We are again reminded of the No Free Lunch Theorem, which suggests that there is no universally best learning algorithm. Even the best models (RF) perform poorly on some problems, and sometimes the worst performing models (LOGREG) perform well on other problems.
+
+\section{Conclusion}
+
+Our results seem to confirm the findings of Caruana and Niculescu-Mizil’s 2006 paper. Random forests perform consistently well across all performance metrics and datasets, implying a certain robustness within the algorithm. Logistic regression has the worst general performance across all metrics, although it performs the best on the DOTA dataset. K-nearest neighbors also performs poorly in general, but its stellar performance on the LETTER dataset nets it a spot just above logistic regression, yet still well below random forests.
+
+The DOTA dataset poses the hardest task for our learning algorithms, achieving only a maximum aggregate score of 0.599 (Table 3) with logistic regression. We suspect that this is an inherent quality of the dataset rather than a problem with our algorithms. Because the DOTA dataset is centered around a video game, it makes sense that the developers would balance certain team compositions to ensure equal play. This means that the better the developers balance the game, the harder it is for any algorithm to predict winners/losers based solely on team compositions. Anything above pure chance (0.5000) indicates that winners/losers can be predicted in the absence of individual player skills, which is definitely not what the developers intended.
+
+Overall, we consider this paper a successful small-scale replication of CNM06. We look forward to evaluating new learning algorithms that may be developed in the future.
+
+% Acknowledgements should go at the end, before appendices and references
+
+\acks{We would like to acknowledge support for this project
+from the the COGS 118A instructional staff, Dr. Jason Fleischer,
+and helpful classmates on Piazza. And Stack Overflow.}
+
+\appendix
+\section*{Appendix}
+
+
+\begin{table}[htb]
+\vspace{2em}
+\centering
+\begin{tabular}{lccc}
+\multicolumn{4}{c}{Table 2 Supplemental. P-values by metric}                \\ \hline
+\multicolumn{1}{|l|}{MODEL}  & ACC             & FSC             & \multicolumn{1}{c|}{AUROC}           \\ \hline
+\multicolumn{1}{|l|}{LOGREG} & 0.0049          & 0.0015          & \multicolumn{1}{c|}{0.0032}          \\
+\multicolumn{1}{|l|}{KNN}    & \textbf{0.0004} & \textbf{0.0010} & \multicolumn{1}{c|}{\textbf{0.0001}} \\
+\multicolumn{1}{|l|}{RF}     & 1.0000          & 1.0000          & \multicolumn{1}{c|}{1.0000}          \\ \hline
+\end{tabular}
+\end{table}
+
+
+\begin{table}[htb]
+\vspace{2em}
+\centering
+\begin{tabular}{lcccl}
+\multicolumn{5}{c}{Table 3 Supplemental. P-values by problem}                                  \\ \hline
+\multicolumn{1}{|l|}{MODEL}  & ADULT           & COVTYPE         & LETTER          & \multicolumn{1}{l|}{DOTA}            \\ \hline
+\multicolumn{1}{|l|}{LOGREG} & 0.0001          & \textbf{0.0001} & \textbf{0.0001} & \multicolumn{1}{l|}{1.0000}          \\
+\multicolumn{1}{|l|}{KNN}    & \textbf{0.0001} & 0.0001          & 1.0000          & \multicolumn{1}{l|}{\textbf{0.0001}} \\
+\multicolumn{1}{|l|}{RF}     & 1.0000          & 1.0000          & 0.0004          & \multicolumn{1}{l|}{0.0001}          \\ \hline
+\end{tabular}
+\end{table}
+
+
+\begin{table}[htb]
+\vspace{2em}
+\centering
+\begin{tabular}{lcccc}
+\multicolumn{5}{c}{Table 4. Normalized training scores for each learning algorithm by dataset}         \\ \hline
+\multicolumn{1}{|l|}{MODEL}  & ACC   & FSC   & \multicolumn{1}{c|}{AUROC} & \multicolumn{1}{c|}{MEAN}  \\ \hline
+\multicolumn{1}{|l|}{LOGREG} & 0.737 & 0.701 & \multicolumn{1}{c|}{0.715} & \multicolumn{1}{c|}{0.718} \\
+\multicolumn{1}{|l|}{KNN}    & 0.879 & 0.874 & \multicolumn{1}{c|}{0.975} & \multicolumn{1}{c|}{0.909} \\
+\multicolumn{1}{|l|}{RF}     & 1.000 & 1.000 & \multicolumn{1}{c|}{1.000} & \multicolumn{1}{c|}{1.000} \\ \hline
+\end{tabular}
+\end{table}
+
+\vspace{2em}
+Table 4 shows the normalized training score for each algorithm on each of the 3 metrics. The testing score for each algorithm and metric combination (Table 2) is lower than its respective training score (Table 4). This illustrates the negative effects of generalizing a trained model onto new data. Random forests suffer the most from generalization errors, with all performance metrics dropping from 1.000 to around 0.780 (Table 2). This suggests that random forests are actually overfitting the training data and introducing more variance into the model than necessary. Regardless, random forests still outperform logistic regression and k-nearest neighbors, implying that it is indeed a more robust model, even with overfitting.
+
+
+\begin{table}[]
+\centering
+\begin{tabular}{lcccc}
+\multicolumn{5}{c}{Table 5. Raw testing scores for all trials}                                                                                                                                                                                                                     \\ \hline
+\multicolumn{1}{|l|}{MODEL}                   & \multicolumn{1}{c|}{PROBLEM} & ACC                                                                           & FSC                                                                           & \multicolumn{1}{c|}{AUROC}                                                                         \\ \hline
+\multicolumn{1}{|l|}{\multirow{4}{*}{LOGREG}} & \multicolumn{1}{c|}{ADULT}   & \begin{tabular}[c]{@{}c@{}}0.846\\ 0.847\\ 0.846\\ 0.845\\ 0.847\end{tabular} & \begin{tabular}[c]{@{}c@{}}0.660\\ 0.664\\ 0.664\\ 0.665\\ 0.660\end{tabular} & \multicolumn{1}{c|}{\begin{tabular}[c]{@{}c@{}}0.764\\ 0.760\\ 0.761\\ 0.764\\ 0.763\end{tabular}} \\ \cline{2-5} 
+\multicolumn{1}{|l|}{}                        & \multicolumn{1}{c|}{COVTYPE} & \begin{tabular}[c]{@{}c@{}}0.752\\ 0.749\\ 0.750\\ 0.752\\ 0.755\end{tabular} & \begin{tabular}[c]{@{}c@{}}0.750\\ 0.749\\ 0.746\\ 0.750\\ 0.754\end{tabular} & \multicolumn{1}{c|}{\begin{tabular}[c]{@{}c@{}}0.752\\ 0.750\\ 0.750\\ 0.752\\ 0.755\end{tabular}} \\ \cline{2-5} 
+\multicolumn{1}{|l|}{}                        & \multicolumn{1}{c|}{LETTER}  & \begin{tabular}[c]{@{}c@{}}0.723\\ 0.730\\ 0.724\\ 0.723\\ 0.728\end{tabular} & \begin{tabular}[c]{@{}c@{}}0.723\\ 0.733\\ 0.725\\ 0.722\\ 0.732\end{tabular} & \multicolumn{1}{c|}{\begin{tabular}[c]{@{}c@{}}0.723\\ 0.730\\ 0.725\\ 0.723\\ 0.728\end{tabular}} \\ \cline{2-5} 
+\multicolumn{1}{|l|}{}                        & \multicolumn{1}{c|}{DOTA}    & \begin{tabular}[c]{@{}c@{}}0.587\\ 0.585\\ 0.587\\ 0.584\\ 0.584\end{tabular} & \begin{tabular}[c]{@{}c@{}}0.624\\ 0.627\\ 0.629\\ 0.620\\ 0.647\end{tabular} & \multicolumn{1}{c|}{\begin{tabular}[c]{@{}c@{}}0.583\\ 0.580\\ 0.583\\ 0.580\\ 0.582\end{tabular}} \\ \hline
+\multicolumn{1}{|l|}{\multirow{4}{*}{KNN}}    & \multicolumn{1}{c|}{ADULT}   & \begin{tabular}[c]{@{}c@{}}0.834\\ 0.832\\ 0.832\\ 0.832\\ 0.833\end{tabular} & \begin{tabular}[c]{@{}c@{}}0.637\\ 0.641\\ 0.633\\ 0.625\\ 0.619\end{tabular} & \multicolumn{1}{c|}{\begin{tabular}[c]{@{}c@{}}0.742\\ 0.755\\ 0.750\\ 0.746\\ 0.743\end{tabular}} \\ \cline{2-5} 
+\multicolumn{1}{|l|}{}                        & \multicolumn{1}{c|}{COVTYPE} & \begin{tabular}[c]{@{}c@{}}0.784\\ 0.782\\ 0.783\\ 0.784\\ 0.780\end{tabular} & \begin{tabular}[c]{@{}c@{}}0.782\\ 0.783\\ 0.784\\ 0.785\\ 0.781\end{tabular} & \multicolumn{1}{c|}{\begin{tabular}[c]{@{}c@{}}0.785\\ 0.782\\ 0.784\\ 0.785\\ 0.781\end{tabular}} \\ \cline{2-5} 
+\multicolumn{1}{|l|}{}                        & \multicolumn{1}{c|}{LETTER}  & \begin{tabular}[c]{@{}c@{}}0.956\\ 0.953\\ 0.951\\ 0.954\\ 0.953\end{tabular} & \begin{tabular}[c]{@{}c@{}}0.955\\ 0.953\\ 0.951\\ 0.954\\ 0.952\end{tabular} & \multicolumn{1}{c|}{\begin{tabular}[c]{@{}c@{}}0.948\\ 0.943\\ 0.946\\ 0.949\\ 0.947\end{tabular}} \\ \cline{2-5} 
+\multicolumn{1}{|l|}{}                        & \multicolumn{1}{c|}{DOTA}    & \begin{tabular}[c]{@{}c@{}}0.553\\ 0.545\\ 0.546\\ 0.550\\ 0.548\end{tabular} & \begin{tabular}[c]{@{}c@{}}0.623\\ 0.607\\ 0.613\\ 0.619\\ 0.630\end{tabular} & \multicolumn{1}{c|}{\begin{tabular}[c]{@{}c@{}}0.544\\ 0.538\\ 0.538\\ 0.542\\ 0.538\end{tabular}} \\ \hline
+\end{tabular}
+\end{table}
+
+\begin{table}[]
+\centering
+\begin{tabular}{lcccc}
+\multicolumn{5}{c}{Table 5. (continued)}                                                                                                                                                                                                                                               \\ \hline
+\multicolumn{1}{|l|}{MODEL}               & \multicolumn{1}{c|}{PROBLEM} & ACC                                                                           & FSC                                                                           & \multicolumn{1}{c|}{AUROC}                                                                         \\ \hline
+\multicolumn{1}{|l|}{\multirow{4}{*}{RF}} & \multicolumn{1}{c|}{ADULT}   & \begin{tabular}[c]{@{}c@{}}0.848\\ 0.848\\ 0.847\\ 0.852\\ 0.851\end{tabular} & \begin{tabular}[c]{@{}c@{}}0.677\\ 0.681\\ 0.674\\ 0.685\\ 0.673\end{tabular} & \multicolumn{1}{c|}{\begin{tabular}[c]{@{}c@{}}0.778\\ 0.783\\ 0.774\\ 0.782\\ 0.772\end{tabular}} \\ \cline{2-5} 
+\multicolumn{1}{|l|}{}                    & \multicolumn{1}{c|}{COVTYPE} & \begin{tabular}[c]{@{}c@{}}0.819\\ 0.826\\ 0.816\\ 0.824\\ 0.830\end{tabular} & \begin{tabular}[c]{@{}c@{}}0.815\\ 0.825\\ 0.815\\ 0.826\\ 0.829\end{tabular} & \multicolumn{1}{c|}{\begin{tabular}[c]{@{}c@{}}0.823\\ 0.828\\ 0.825\\ 0.824\\ 0.830\end{tabular}} \\ \cline{2-5} 
+\multicolumn{1}{|l|}{}                    & \multicolumn{1}{c|}{LETTER}  & \begin{tabular}[c]{@{}c@{}}0.949\\ 0.945\\ 0.948\\ 0.947\\ 0.944\end{tabular} & \begin{tabular}[c]{@{}c@{}}0.948\\ 0.944\\ 0.948\\ 0.947\\ 0.944\end{tabular} & \multicolumn{1}{c|}{\begin{tabular}[c]{@{}c@{}}0.949\\ 0.944\\ 0.947\\ 0.946\\ 0.945\end{tabular}} \\ \cline{2-5} 
+\multicolumn{1}{|l|}{}                    & \multicolumn{1}{c|}{DOTA}    & \begin{tabular}[c]{@{}c@{}}0.570\\ 0.560\\ 0.567\\ 0.566\\ 0.565\end{tabular} & \begin{tabular}[c]{@{}c@{}}0.626\\ 0.615\\ 0.630\\ 0.628\\ 0.619\end{tabular} & \multicolumn{1}{c|}{\begin{tabular}[c]{@{}c@{}}0.563\\ 0.556\\ 0.558\\ 0.559\\ 0.559\end{tabular}} \\ \hline
+\end{tabular}
+\end{table}
+
+
+
+% Manual newpage inserted to improve layout of sample file - not
+% needed in general before appendices/bibliography.
+
+\newpage
+
+
+\vskip 0.2in
+\begin{thebibliography}{5}
+
+\bibitem[1]{cnm06} 
+R. Caruana and A. Niculescu-Mizil. (2006).
+``An empirical comparison of supervised learning algorithms.” 
+\textit{In Proceedings of the 23rd international conference on Machine learning,161-168.}
+
+\bibitem[2]{logreg}
+Sklearn.linear\_model.logisticregression. Retrieved March 18, 2021, from https://scikit-learn.org/stable/modules/generated/sklearn.linear\_model.LogisticRegression.html
+
+\bibitem[3]{knn}
+Sklearn.neighbors.kneighborsclassifier. Retrieved March 18, 2021, from https://scikit-learn.org/stable/modules/generated/sklearn.neighbors.KNeighborsClassifier.html
+
+\bibitem[4]{rf}
+Sklearn.ensemble.randomforestclassifier. Retrieved March 18, 2021, from https://scikit-learn.org/stable/modules/generated/sklearn.ensemble.RandomForestClassifier.html
+
+\bibitem[5]{grid}
+Sklearn.model\_selection.gridsearchcv. Retrieved March 18, 2021, from https://scikit-learn.org/stable/modules/generated/sklearn.model\_selection.GridSearchCV.html
+
+\end{thebibliography}
+
+\end{document}
